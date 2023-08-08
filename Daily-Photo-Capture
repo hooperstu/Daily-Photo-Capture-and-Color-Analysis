@@ -1,7 +1,7 @@
-import schedule
-import time
+from apscheduler.schedulers.blocking import BlockingScheduler
 from picamera import PiCamera
 from datetime import datetime
+import pytz
 
 camera = PiCamera()
 
@@ -9,8 +9,9 @@ def job():
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     camera.capture('/path/to/save/image/{}.jpg'.format(timestamp))
 
-schedule.every().day.at("09:00").do(job)
+scheduler = BlockingScheduler()
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+# Schedule job at 9am UTC
+scheduler.add_job(job, 'interval', days=1, start_date='2023-01-01 09:00:00', timezone=pytz.utc)
+
+scheduler.start()
