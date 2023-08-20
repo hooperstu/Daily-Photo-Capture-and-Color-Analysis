@@ -5,32 +5,56 @@ from sklearn.cluster import KMeans
 from skimage import color
 
 def convert_rgb_to_cmyk(rgb):
-    return color.rgb2cmyk(rgb)
+    try:
+        return color.rgb2cmyk(rgb)
+    except Exception as e:
+        print(f"Error converting RGB to CMYK: {e}")
+        return None
 
 def get_most_prominent_color(image, k=2):
-    image = image.reshape(-1, 3)
-    kmeans = KMeans(n_clusters=k)
-    kmeans.fit(image)
+    try:
+        image = image.reshape(-1, 3)
+        kmeans = KMeans(n_clusters=k)
+        kmeans.fit(image)
     
-    rgb = kmeans.cluster_centers_[np.argmax(np.bincount(kmeans.labels_))]
-    
-    return rgb
+        rgb = kmeans.cluster_centers_[np.argmax(np.bincount(kmeans.labels_))]
+
+        return rgb
+    except Exception as e:
+        print(f"Error getting most prominent color: {e}")
+        return None
 
 def convert_and_get_color(file_path):
-    image = cv2.imread(file_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    rgb = get_most_prominent_color(image)
+    try:
+        image = cv2.imread(file_path)
+        if image is None: # Check if the image loaded correctly
+            print(f"Error reading image: {file_path}")
+            return None
 
-    cmyk = convert_rgb_to_cmyk([x / 255.0 for x in rgb])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        rgb = get_most_prominent_color(image)
 
-    return cmyk
+        if rgb is None:  # Check if RGB value was fetched correctly
+            return None
+
+        cmyk = convert_rgb_to_cmyk([x / 255.0 for x in rgb])
+
+        return cmyk
+    except Exception as e:
+        print(f"Error processing file {file_path}: {e}")
+        return None
 
 def iterate_folder_and_save_to_file(folder_path, output_file):
+    if not os.path.exists(folder_path):
+        print(f"Folder path does not exist: {folder_path}")
+        return
+
     with open(output_file, 'w') as file:
         for filename in os.listdir(folder_path):
             if filename.endswith('.jpg') or filename.endswith('.png'):
                 file_path = os.path.join(folder_path, filename)
                 cmyk = convert_and_get_color(file_path)
-                file.write(f'{filename}: {cmyk}\n')
+                if cmyk:
+                    file.write(f'{filename}: {cmyk}\n')
 
 iterate_folder_and_save_to_file('path_to_your_folder', 'output.txt')
